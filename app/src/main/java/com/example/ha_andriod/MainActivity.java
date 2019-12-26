@@ -42,12 +42,11 @@ public class MainActivity extends AppCompatActivity {
     boolean mustStopSSIDCheck = false;
 
     boolean connectionSuccess = false;
-    boolean pauseTask = false;
+    boolean pauseWaitTask = false;
     ServerSocket serverSocket = null;
     String getRequest;
     String[] reqParameters = new String[7];
     WaitForConnectionTask waitForConnectionTask;
-    String handshakeMessage = "client@app$action@config$0$0$APP$0$0$";
 
     boolean handshake = false;
     boolean hTaskRunning = false;
@@ -203,7 +202,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void waitForConnection(){
-        pauseTask = false;
+        pauseWaitTask = false;
         waitForConnectionTask = new WaitForConnectionTask();
         waitForConnectionTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
@@ -222,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
                 inetAddress = InetAddress.getLocalHost();
                 serverSocket = new ServerSocket(port);
                 serverSocket.setSoTimeout(10000);
-                while(!pauseTask){
+                while(!pauseWaitTask){
                     socket = serverSocket.accept();
                     br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     getRequest = br.readLine();
@@ -246,7 +245,7 @@ public class MainActivity extends AppCompatActivity {
                             Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
                         }
 
-                        pauseTask = true;
+                        pauseWaitTask = true;
                     }else{
                         Log.d("MSG2", "Message Body Invalid");
                     }
@@ -268,22 +267,15 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class DecodeParamaters extends AsyncTask<Void, Void, Void>{
-
-        boolean callSSIDCheck = false;
-
         @Override
         protected Void doInBackground(Void... voids) {
-            if(reqParameters[1].equals("action@config")){
-                id = Integer.parseInt(reqParameters[3]);
-            }
+
             return null;
         }
 
         @Override
         protected void onPostExecute(Void voids){
-            if(callSSIDCheck){
-                new KeepCheckingSSID().execute();
-            }
+
         }
     }
 
@@ -405,7 +397,7 @@ public class MainActivity extends AppCompatActivity {
         }catch(Exception e){
             Log.d("MSG2", "Pause E: " + e.getMessage());
         }
-        pauseTask = true;
+        pauseWaitTask = true;
         mustStopSSIDCheck = true;
     }
 
