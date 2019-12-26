@@ -6,6 +6,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -33,7 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 public class MainActivity extends AppCompatActivity {
 
-    int id;
+    int id = -1;
     LocationManager locationManager;
     boolean gps_enabled = false;
     Intent locationIntent;
@@ -48,8 +49,8 @@ public class MainActivity extends AppCompatActivity {
     WaitForConnectionTask waitForConnectionTask;
     String handshakeMessage = "client@app$action@config$0$0$APP$0$0$";
 
-    boolean handshake;
-    boolean handshakeReqSent = false;
+    boolean handshake = false;
+    boolean hTaskRunning = false;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,109 +62,109 @@ public class MainActivity extends AppCompatActivity {
         getLocationAccess();
         Log.d("MSG", "Location Done");
 
-        waitForConnection();
-        tryHandShake();
+        handshakeTry();
     }
 
-    @Override
-    protected void onStop(){
-        super.onStop();
-        try{
-            serverSocket.close();
-        }catch(Exception e){
-            Log.d("MSG2", "Pause E: " + e.getMessage());
-        }
-        pauseTask = true;
-        mustStopSSIDCheck = true;
-    }
-
-    @Override
-    protected void onRestart(){
-        super.onRestart();
-        mustStopSSIDCheck = false;
-        if(handshake)
-            new KeepCheckingSSID().execute();
-        //call async task
-    }
-
-    //Show Location Permission Dialog if not permitted
-    protected void getLocationAccess(){
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            //Pop Dialog
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
-        }
-        else{
-            Toast.makeText(this,"Has Location Access", Toast.LENGTH_SHORT).show();
-            turnOnLocation();
-        }
-    }
-
-    //Making of Location Permission Dialog, action on the click
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-        switch (requestCode) {
-            case 1: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Got Location Access", Toast.LENGTH_SHORT).show();
-                    Log.d("MSG2", "Got Access");
-                    turnOnLocation();
-                } else {
-                    Toast.makeText(this, "App requires location access to verify connection to MODULE", Toast.LENGTH_SHORT).show();
-                    Log.d("MSG2", "Access Denied");
-                    getLocationAccess();
-                }
-                return;
-            }
-        }
-    }
-
-    //Open Location settings if location not ON
-    protected void turnOnLocation(){
-        try {
-            gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-            Log.d("MSG2", "GPS Stat");
-        } catch(Exception ex) {}
-        if(!gps_enabled){
-            //Open Location Settings
-            Toast.makeText(this,"Location OFF", Toast.LENGTH_SHORT).show();
-            Log.d("MSG2", "Starting gps activity");
-            startActivity(locationIntent);
-        }
-
-    }
-
-    private void showDialog(){
-        AlertDialog.Builder builder;
-
-        builder = new AlertDialog.Builder(this);
-
-        builder.setMessage("Unable to Connecte to ESP32, check WiFi connection to the Module.").setCancelable(false).setPositiveButton("Try Again", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                dialog.cancel();
-                //try to handshake
-            }
-        }).setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-                finish();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.setTitle("Connection Error!");
-        alert.show();
-    }
-
-    void tryHandShake(){
+    void handshakeTry(){
+        Log.d("MSG2", "Trying handshake");
         handshake = false;
-        handshakeReqSent = true;
-        new ConnectTask().execute(handshakeMessage);
+        hTaskRunning = true;
+        new HandshakeTask().execute();
+        /*while(hTaskRunning){
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }*/
+
     }
 
+    class HandshakeTask extends AsyncTask<Void, Void, Void>{
+
+        HttpURLConnection con;
+        URL url;
+        String data = "client@app$action@config$0$0$APP$0$0$";
+        Socket socket = null;
+        private ProgressDialog progressDialog;
+
+        @Override
+        protected void onPreExecute() {
+            progressDialog = new ProgressDialog(MainActivity.this);
+            progressDialog.setMessage("Connecting....");
+            progressDialog.show();
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            try {
+                url = new URL("http://192.168.1.1:8080/message?data=" + data);
+                Log.d("MSG2", "URL: " + url);
+                con = (HttpURLConnection)url.openConnection();
+                con.setConnectTimeout(7000);
+                con.connect();
+                int resCode = con.getResponseCode();
+                Log.d("MSG2", "Res Code: " + resCode);
+                if(resCode == 200){
+                    con.disconnect();
+                    ServerSocket serverSocket = new ServerSocket(8080);
+                    serverSocket.setSoTimeout(10000);
+                    socket = serverSocket.accept();
+                    BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                    getRequest = br.readLine();
+                    PrintStream ps = new PrintStream(socket.getOutputStream());
+                    ps.println("HTTP/1.1 200 OK\n");
+                    ps.close();
+                    br.close();
+                    socket.close();
+
+                    int i = getRequest.indexOf("/message?data=");
+                    if(i>0){
+                        getRequest = getRequest.substring(i);
+                        i = getRequest.indexOf("=");
+                        i++;
+                        getRequest = getRequest.substring(i);
+                        i = getRequest.indexOf(" ");
+                        getRequest = getRequest.substring(0, i);
+                        reqParameters = getRequest.split("\\$", 0);
+                        for(i=0; i<7; i++){
+                            Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
+                        }
+                        id = Integer.parseInt(reqParameters[3]);
+                        Log.d("MSG2", "ID: " + id);
+                        if(id!=-1)
+                            handshake = true;
+
+                    }else{
+                        Log.d("MSG2", "Message Body Invalid");
+                    }
+                }
+            } catch (Exception e) {
+                Log.d("MSG2", "HandShake E: " + e.getMessage());
+                e.printStackTrace();
+            }finally{
+                hTaskRunning = false;
+                Log.d("MSG2", "HTaskRunning: " + hTaskRunning);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            if (progressDialog.isShowing()) {
+                progressDialog.dismiss();
+            }
+            if(!handshake){
+                Log.d("MSG2", "Failed handshake");
+                showDialog();
+            }else{
+                Log.d("MSG2", "Success handshake");
+                //start ssidcheckthread.
+                new KeepCheckingSSID().execute();
+                //refresh node list
+            }
+        }
+    }
 
     class ConnectTask extends AsyncTask<String, Void, Void>{
 
@@ -274,12 +275,6 @@ public class MainActivity extends AppCompatActivity {
         protected Void doInBackground(Void... voids) {
             if(reqParameters[1].equals("action@config")){
                 id = Integer.parseInt(reqParameters[3]);
-                Log.d("MSG2", "Got ID: " + id);
-                if(handshakeReqSent){
-                    handshake = true;
-                    handshakeReqSent = false;
-                    callSSIDCheck = true;
-                }
             }
             return null;
         }
@@ -327,5 +322,100 @@ public class MainActivity extends AppCompatActivity {
             if(!handshake)
                 showDialog();
         }
+    }
+
+    //Show Location Permission Dialog if not permitted
+    protected void getLocationAccess(){
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            //Pop Dialog
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+        }
+        else{
+            Toast.makeText(this,"Has Location Access", Toast.LENGTH_SHORT).show();
+            turnOnLocation();
+        }
+    }
+
+    //Making of Location Permission Dialog, action on the click
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Toast.makeText(this, "Got Location Access", Toast.LENGTH_SHORT).show();
+                    Log.d("MSG2", "Got Access");
+                    turnOnLocation();
+                } else {
+                    Toast.makeText(this, "App requires location access to verify connection to MODULE", Toast.LENGTH_SHORT).show();
+                    Log.d("MSG2", "Access Denied");
+                    getLocationAccess();
+                }
+                return;
+            }
+        }
+    }
+
+    //Open Location settings if location not ON
+    protected void turnOnLocation(){
+        try {
+            gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+            Log.d("MSG2", "GPS Stat");
+        } catch(Exception ex) {}
+        if(!gps_enabled){
+            //Open Location Settings
+            Toast.makeText(this,"Location OFF", Toast.LENGTH_SHORT).show();
+            Log.d("MSG2", "Starting gps activity");
+            startActivity(locationIntent);
+        }
+
+    }
+
+    private void showDialog(){
+        AlertDialog.Builder builder;
+
+        builder = new AlertDialog.Builder(this);
+
+        builder.setMessage("Unable to Register To ESP, Check Connection").setCancelable(false).setPositiveButton("Try Again", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.cancel();
+                handshakeTry();
+            }
+        }).setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+                finish();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.setTitle("Connection Error!");
+        alert.show();
+    }
+
+    @Override
+    protected void onStop(){
+        super.onStop();
+        Log.d("MSG2", "Stopped");
+        try{
+            //serverSocket.close();
+        }catch(Exception e){
+            Log.d("MSG2", "Pause E: " + e.getMessage());
+        }
+        pauseTask = true;
+        mustStopSSIDCheck = true;
+    }
+
+    @Override
+    protected void onRestart(){
+        super.onRestart();
+        Log.d("MSG@", "Restarted");
+        getLocationAccess();
+        mustStopSSIDCheck = false;
+        if(handshake)
+            new KeepCheckingSSID().execute();
     }
 }
