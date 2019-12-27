@@ -19,6 +19,12 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.GridView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
@@ -26,13 +32,19 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
-import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URL;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
+
+    GridView grid;
+    LayoutInflater inflater;
+    View item;
+    static CustomAdapter adapter;
 
     int id = -1;
     LocationManager locationManager;
@@ -41,15 +53,21 @@ public class MainActivity extends AppCompatActivity {
 
     boolean mustStopSSIDCheck = false;
 
-    boolean connectionSuccess = false;
+    static boolean connectionSuccess = false;
     boolean pauseWaitTask = false;
     ServerSocket serverSocket = null;
     String getRequest;
     String[] reqParameters = new String[7];
     WaitForConnectionTask waitForConnectionTask;
+    static ConnectTask connectTask;
 
     boolean handshake = false;
     boolean hTaskRunning = false;
+    String dataToSend;
+
+    static ArrayList<Node> nodes = new ArrayList<Node>();
+    static Iterator iterator;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,6 +80,17 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MSG", "Location Done");
 
         handshakeTry();
+
+        grid  = findViewById(R.id.grid);
+        adapter = new CustomAdapter(MainActivity.this, nodes);
+        grid.setAdapter(adapter);
+    }
+
+    void getNodeList(){
+        Log.d("MSG2", "Asking for NODE lIST");
+        dataToSend = "client@app$action@getnodelist$0$" + id + "$APP$1$0$";
+        new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
+        Log.d("MSG2", "Connect called");
     }
 
     void handshakeTry(){
@@ -69,14 +98,6 @@ public class MainActivity extends AppCompatActivity {
         handshake = false;
         hTaskRunning = true;
         new HandshakeTask().execute();
-        /*while(hTaskRunning){
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }*/
-
     }
 
     class HandshakeTask extends AsyncTask<Void, Void, Void>{
@@ -108,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
                     con.disconnect();
                     ServerSocket serverSocket = new ServerSocket(8080);
                     serverSocket.setSoTimeout(10000);
+                    Log.d("MSG2", "Socket Open");
                     socket = serverSocket.accept();
                     BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     getRequest = br.readLine();
@@ -116,9 +138,11 @@ public class MainActivity extends AppCompatActivity {
                     ps.close();
                     br.close();
                     socket.close();
-
+                    serverSocket.close();
+                    Log.d("MSG2", "here");
                     int i = getRequest.indexOf("/message?data=");
                     if(i>0){
+                        Log.d("MSG2", "here1");
                         getRequest = getRequest.substring(i);
                         i = getRequest.indexOf("=");
                         i++;
@@ -160,12 +184,14 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("MSG2", "Success handshake");
                 //start ssidcheckthread.
                 new KeepCheckingSSID().execute();
+                waitForConnection();
                 //refresh node list
+                getNodeList();
             }
         }
     }
 
-    class ConnectTask extends AsyncTask<String, Void, Void>{
+    static class ConnectTask extends AsyncTask<String, Void, Void>{
 
         HttpURLConnection con;
         URL url;
@@ -173,6 +199,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(String... strings) {
+            Log.d("MSG2", "In Connect");
             data = strings[0];
             connectionSuccess = false;
             try {
@@ -220,62 +247,151 @@ public class MainActivity extends AppCompatActivity {
             try{
                 inetAddress = InetAddress.getLocalHost();
                 serverSocket = new ServerSocket(port);
-                serverSocket.setSoTimeout(10000);
+                serverSocket.setSoTimeout(1000);
                 while(!pauseWaitTask){
-                    socket = serverSocket.accept();
-                    br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-                    getRequest = br.readLine();
-                    ps = new PrintStream(socket.getOutputStream());
-                    ps.println("HTTP/1.1 200 OK\n");
-                    ps.close();
-                    br.close();
-                    socket.close();
+                    try{
+                        socket = serverSocket.accept();
+                        br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+                        getRequest = br.readLine();
+                        ps = new PrintStream(socket.getOutputStream());
+                        ps.println("HTTP/1.1 200 OK\n");
+                        ps.close();
+                        br.close();
+                        socket.close();
 
-                    int i = getRequest.indexOf("/message?data=");
-                    if(i>0){
-                        getRequest = getRequest.substring(i);
-                        i = getRequest.indexOf("=");
-                        i++;
-                        getRequest = getRequest.substring(i);
-                        i = getRequest.indexOf(" ");
-                        getRequest = getRequest.substring(0, i);
+                        int i = getRequest.indexOf("/message?data=");
+                        if(i>0){
+                            getRequest = getRequest.substring(i);
+                            i = getRequest.indexOf("=");
+                            i++;
+                            getRequest = getRequest.substring(i);
+                            i = getRequest.indexOf(" ");
+                            getRequest = getRequest.substring(0, i);
 
-                        reqParameters = getRequest.split("\\$", 0);
-                        for(i=0; i<7; i++){
-                            Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
+                            reqParameters = getRequest.split("\\$", 0);
+                            for(i=0; i<7; i++){
+                                Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
+                            }
+
+                            pauseWaitTask = true;
+                        }else{
+                            Log.d("MSG2", "Message Body Invalid");
                         }
-
-                        pauseWaitTask = true;
-                    }else{
-                        Log.d("MSG2", "Message Body Invalid");
+                    }catch(Exception e){
+                       // Log.d("MSG2", "Wait Inner E: " + e.getMessage());
+                        e.printStackTrace();
                     }
                 }
 
+                Log.d("MSG2", "Wait stopped");
                 serverSocket.close();
-
             }catch (Exception e){
                 Log.d("MSG2", "Wait E: " + e.getMessage());
+            }
+
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void voids){
+            if(handshake) {
+                new DecodeParamaters().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+                waitForConnection();
+            }
+
+        }
+    }
+
+    void printNodeList(){
+        iterator = nodes.iterator();
+        Log.d("MSG2", "-----------------------------------------------");
+        Log.d("MSG2", "ID Name    Cstat RStat Type");
+        while(iterator.hasNext()){
+            Node temp = (Node)iterator.next();
+            Log.d("MSG2", temp.nodeId + " " + temp.nodeName + " " + temp.conStat + " " + temp.rStat + " " + temp.type);
+        }
+        Log.d("MSG2", "-----------------------------------------------");
+    }
+
+    boolean isPresent(int id){
+        for(int i=0; i<Node.nodeCount; i++){
+            if(nodes.get(i).nodeId == id){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Node getNodeObject(int id){
+        iterator = nodes.iterator();
+        while(iterator.hasNext()){
+            Node temp = (Node)iterator.next();
+            if(temp.nodeId == id)
+                return temp;
+        }
+        return null;
+    }
+
+    static void sendNodeStat(Node node){
+        int r = 0, c = 0;
+
+        if(node.conStat)
+            c = 1;
+        if(node.rStat)
+            r = 1;
+        String dataToSend = "client@app$action@stat$0$" + node.nodeId + "$" + node.nodeName + "$" + c + "$" + r + "$";
+        Log.d("MSG2", "Sendig Node STat");
+        connectTask = (ConnectTask) new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
+    }
+
+    void setNodeStat(Node node){
+        for(int i=0; i<Node.nodeCount; i++){
+            if(nodes.get(i).nodeId == node.nodeId){
+                nodes.set(i, node);
+                break;
+            }
+        }
+        printNodeList();
+    }
+
+
+
+    class DecodeParamaters extends AsyncTask<Void, Void, Void>{
+        boolean nodeStatChange = false;
+        boolean newNodeAdded = false;
+        boolean change = false;
+        Node newNode = null;
+        @Override
+        protected Void doInBackground(Void... voids) {
+            Log.d("MSG2", "In Decode Parameters");
+            if(reqParameters[1].equals("action@stat")){
+                boolean c = false, r = false;
+                if(Integer.parseInt(reqParameters[5]) == 1)
+                    c = true;
+                if(Integer.parseInt(reqParameters[6]) == 1)
+                    r = true;
+                newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), Integer.parseInt(reqParameters[2]), c, r);
+                if(isPresent(Integer.parseInt(reqParameters[3]))){
+                    Log.d("MSG2", "Setting stat, node present");
+                    setNodeStat(newNode);
+                    nodeStatChange = true;
+                }else{
+                    //Node Doesnt Exist
+                    nodes.add(newNode);
+                    Log.d("MSG2", "New Node, added in DS");
+                    Node.nodeCount++;
+                    newNodeAdded = true;
+                    printNodeList();
+                }
+                change = true;
             }
             return null;
         }
 
         @Override
         protected void onPostExecute(Void voids){
-            new DecodeParamaters().execute();
-            waitForConnection();
-        }
-    }
-
-    class DecodeParamaters extends AsyncTask<Void, Void, Void>{
-        @Override
-        protected Void doInBackground(Void... voids) {
-
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void voids){
-
+            if(change)
+                adapter.notifyDataSetChanged();
         }
     }
 
@@ -305,14 +421,21 @@ public class MainActivity extends AppCompatActivity {
                     handshake = false;
                     mustStopSSIDCheck = true;
                 }
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
             return null;
         }
 
         @Override
         protected void onPostExecute(Void voids){
-            if(!handshake)
+            if(!handshake) {
+                pauseWaitTask = true;
                 showDialog();
+            }
         }
     }
 
@@ -409,5 +532,92 @@ public class MainActivity extends AppCompatActivity {
         mustStopSSIDCheck = false;
         if(handshake)
             new KeepCheckingSSID().execute();
+    }
+}
+
+class Node{
+    public static int nodeCount;
+
+    String nodeName;
+    boolean rStat, conStat;
+    int nodeId;
+    int type;
+
+    Node(String name, int id, int type, boolean conStat, boolean rStat){
+        nodeName = name;
+        this.nodeId = id;
+        this.type = type;
+        this.rStat = rStat;
+        this.conStat = conStat;
+    }
+}
+
+class CustomAdapter extends BaseAdapter{
+    ArrayList<Node> nodeList;
+    private Context context;
+
+    CustomAdapter(Context context, ArrayList<Node> nodeList){
+        this.context = context;
+        this.nodeList = nodeList;
+    }
+
+    @Override
+    public int getCount() {
+        return nodeList.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return nodeList.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return 0;
+    }
+
+    @Override
+    public View getView(final int position, View convertView, ViewGroup parent) {
+        LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View gridItem;
+        if(convertView == null){
+            gridItem = (View) inflater.inflate(R.layout.item, null);
+
+
+        }else{
+            gridItem = (View) convertView;
+        }
+        Node temp = nodeList.get(position);
+        gridItem.setTag("Node:" + nodeList.get(position).nodeId);
+        if(temp.rStat){
+            gridItem.setBackgroundResource(R.drawable.greyborder);
+        }else{
+            gridItem.setBackgroundResource(R.drawable.redborder);
+        }
+
+        gridItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String tag = v.getTag().toString();
+                tag = tag.substring(5);
+                int id = Integer.parseInt(tag);
+                Node temp = MainActivity.getNodeObject(id);
+                if(temp.rStat){
+                    temp.rStat = false;
+                    v.setBackgroundResource(R.drawable.redborder);
+                }else{
+                    temp.rStat = true;
+                    v.setBackgroundResource(R.drawable.greyborder);
+                }
+                MainActivity.adapter.notifyDataSetChanged();
+                MainActivity.sendNodeStat(temp);
+            }
+        });
+
+        TextView head = (TextView)gridItem.findViewWithTag("text");
+        head.setText("Hello: " + temp.nodeId);
+        TextView detail = (TextView)gridItem.findViewWithTag("detail");
+        detail.setText("R: " + temp.rStat + ", C: " + temp.conStat);
+        return gridItem;
     }
 }
