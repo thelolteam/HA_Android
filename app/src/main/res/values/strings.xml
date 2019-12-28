@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">HA_Andriod</string>
+    <string-array name="nodeNameList">
+        <item>Light</item>
+        <item>Fan</item>
+        <item>Tv</item>
+        <item>Default</item>
+    </string-array>
 </resources>

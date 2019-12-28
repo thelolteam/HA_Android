@@ -6,6 +6,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -19,13 +20,19 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridView;
+import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,6 +50,11 @@ import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
 
+    DisplayMetrics metrics;
+    static int width;
+    static int height;
+
+    ImageButton settings;
     GridView grid;
     LayoutInflater inflater;
     View item;
@@ -78,6 +90,8 @@ public class MainActivity extends AppCompatActivity {
         locationManager = (LocationManager)getApplicationContext().getSystemService(getApplicationContext().LOCATION_SERVICE);
         locationIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
 
+        settings = findViewById(R.id.setting);
+
         getLocationAccess();
         Log.d("MSG", "Location Done");
 
@@ -86,6 +100,44 @@ public class MainActivity extends AppCompatActivity {
         grid  = findViewById(R.id.grid);
         adapter = new CustomAdapter(MainActivity.this, nodes);
         grid.setAdapter(adapter);
+
+        metrics = getResources().getDisplayMetrics();
+        width = metrics.widthPixels;
+        height = metrics.heightPixels;
+
+        settings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(R.layout.settings);
+                Button saveBtn = dialog.findViewById(R.id.saveBtn);
+                Button discardBtn = dialog.findViewById(R.id.discardBtn);
+
+                saveBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        EditText temp = dialog.findViewById(R.id.ssid);
+                        String ssid = temp.getText().toString();
+                        temp = dialog.findViewById(R.id.password);
+                        String password = temp.getText().toString();
+
+                        dialog.dismiss();
+
+                        String dataToSend = "client@app$action@apconfig$" + ssid + "$" + password + "$";
+                        new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
+                    }
+                });
+
+                discardBtn.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+                dialog.getWindow().setLayout(7*(width/8), 5*(height/6));
+                dialog.show();
+            }
+        });
     }
 
     void getNodeList(){
@@ -623,7 +675,8 @@ class CustomAdapter extends BaseAdapter{
         gridItem.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                Toast.makeText(context, "Long Clicked", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(context, "Long Clicked", Toast.LENGTH_SHORT).show();
+                showNodeConfigDialog(v);
                 return true;
             }
         });
@@ -638,5 +691,51 @@ class CustomAdapter extends BaseAdapter{
             image.setImageResource(R.drawable.off128);
 
         return gridItem;
+    }
+
+    public void showNodeConfigDialog(View v){
+        String tag = v.getTag().toString();
+        tag = tag.substring(5);
+        int id = Integer.parseInt(tag);
+        final Node temp = MainActivity.getNodeObject(id);
+
+        final Dialog dialog = new Dialog(context);
+        dialog.setContentView(R.layout.nodeconfig);
+        dialog.setTitle("Node Config");
+        final Spinner spinner = dialog.findViewById(R.id.nodeNameSpinner);
+
+        if(temp.nodeName.equals("Light"))
+            spinner.setSelection(0);
+        else if(temp.nodeName.equals("Fan"))
+            spinner.setSelection(1);
+        else if(temp.nodeName.equals("TV"))
+            spinner.setSelection(2);
+        else
+            spinner.setSelection(3);
+
+        Button saveBtn = dialog.findViewById(R.id.saveBtn);
+        Button discardBtn = dialog.findViewById(R.id.discardBtn);
+
+        saveBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(spinner.getSelectedItemPosition() == 3)
+                    temp.nodeName = "Node";
+                else
+                    temp.nodeName = spinner.getSelectedItem().toString();
+                dialog.dismiss();
+                MainActivity.adapter.notifyDataSetChanged();
+                MainActivity.sendNodeStat(temp);
+            }
+        });
+
+        discardBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialog.dismiss();
+            }
+        });
+        dialog.getWindow().setLayout(7*(MainActivity.width/8), 5*(MainActivity.height/6));
+        dialog.show();
     }
 }
