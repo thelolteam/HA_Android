@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.LocationManager;
 import android.net.wifi.SupplicantState;
 import android.net.wifi.WifiInfo;
@@ -24,6 +25,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.GridView;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -87,6 +89,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void getNodeList(){
+        nodes.clear();
+        Node.nodeCount = 0;
+        printNodeList();
         Log.d("MSG2", "Asking for NODE lIST");
         dataToSend = "client@app$action@getnodelist$0$" + id + "$APP$1$0$";
         new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
@@ -202,20 +207,22 @@ public class MainActivity extends AppCompatActivity {
             Log.d("MSG2", "In Connect");
             data = strings[0];
             connectionSuccess = false;
-            try {
-                url = new URL("http://192.168.1.1:8080/message?data=" + data);
-                Log.d("MSG2", "URL: " + url);
-                con = (HttpURLConnection)url.openConnection();
-                con.connect();
-                int resCode = con.getResponseCode();
-                if(resCode == 200){
-                    connectionSuccess = true;
+            while(!connectionSuccess){
+                try {
+                    url = new URL("http://192.168.1.1:8080/message?data=" + data);
+                    Log.d("MSG2", "URL: " + url);
+                    con = (HttpURLConnection)url.openConnection();
+                    con.connect();
+                    int resCode = con.getResponseCode();
+                    if(resCode == 200){
+                        connectionSuccess = true;
+                    }
+                    Log.d("MSG2", "Res Code: " + resCode);
+                    con.disconnect();
+                } catch (Exception e) {
+                    Log.d("MSG2", "Connect E: " + e.getMessage() + " CS: " + connectionSuccess);
+                    e.printStackTrace();
                 }
-                Log.d("MSG2", "Res Code: " + resCode);
-                con.disconnect();
-            } catch (Exception e) {
-                Log.d("MSG2", "Connect E: " + e.getMessage());
-                e.printStackTrace();
             }
             return null;
         }
@@ -223,7 +230,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPostExecute(Void voids){
             if(connectionSuccess){
-                //reflect
+                connectionSuccess = false;
             }
         }
     }
@@ -241,6 +248,7 @@ public class MainActivity extends AppCompatActivity {
         int port = 8080;
         BufferedReader br;
         PrintStream ps;
+        boolean decode = false;
 
         @Override
         protected Void doInBackground(Void... voids) {
@@ -272,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
                             for(i=0; i<7; i++){
                                 Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
                             }
-
+                            decode = true;
                             pauseWaitTask = true;
                         }else{
                             Log.d("MSG2", "Message Body Invalid");
@@ -294,7 +302,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void voids){
-            if(handshake) {
+            if(handshake && decode) {
                 new DecodeParamaters().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 waitForConnection();
             }
@@ -314,10 +322,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     boolean isPresent(int id){
-        for(int i=0; i<Node.nodeCount; i++){
-            if(nodes.get(i).nodeId == id){
+        iterator = nodes.iterator();
+        while(iterator.hasNext()){
+            Node temp = (Node)iterator.next();
+            if(temp.nodeId == id)
                 return true;
-            }
         }
         return false;
     }
@@ -357,8 +366,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     class DecodeParamaters extends AsyncTask<Void, Void, Void>{
-        boolean nodeStatChange = false;
-        boolean newNodeAdded = false;
         boolean change = false;
         Node newNode = null;
         @Override
@@ -371,18 +378,29 @@ public class MainActivity extends AppCompatActivity {
                 if(Integer.parseInt(reqParameters[6]) == 1)
                     r = true;
                 newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), Integer.parseInt(reqParameters[2]), c, r);
+                Log.d("MSG2", "incoming Node temp created");
                 if(isPresent(Integer.parseInt(reqParameters[3]))){
                     Log.d("MSG2", "Setting stat, node present");
-                    setNodeStat(newNode);
-                    nodeStatChange = true;
+                    if(!c){
+                        Log.d("MSG2","Cstat 0, removing node");
+                        Node temp = getNodeObject(newNode.nodeId);
+                        nodes.remove(temp);
+                        Node.nodeCount--;
+                    }
+                    else{
+                        setNodeStat(newNode);
+                    }
                 }else{
-                    //Node Doesnt Exist
-                    nodes.add(newNode);
-                    Log.d("MSG2", "New Node, added in DS");
-                    Node.nodeCount++;
-                    newNodeAdded = true;
-                    printNodeList();
+                    if(c){
+                        //Node Doesnt Exist
+                        Log.d("MSG2", "its a new node");
+                        nodes.add(newNode);
+                        Log.d("MSG2", "New Node, added in DS");
+                        Node.nodeCount++;
+                    }
+
                 }
+                printNodeList();
                 change = true;
             }
             return null;
@@ -512,26 +530,18 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop(){
-        super.onStop();
-        Log.d("MSG2", "Stopped");
-        try{
-            //serverSocket.close();
-        }catch(Exception e){
-            Log.d("MSG2", "Pause E: " + e.getMessage());
-        }
-        pauseWaitTask = true;
-        mustStopSSIDCheck = true;
-    }
-
-    @Override
     protected void onRestart(){
         super.onRestart();
         Log.d("MSG@", "Restarted");
         getLocationAccess();
-        mustStopSSIDCheck = false;
-        if(handshake)
-            new KeepCheckingSSID().execute();
+    }
+
+    @Override
+    protected  void onDestroy(){
+        super.onDestroy();
+        pauseWaitTask = true;
+        mustStopSSIDCheck = true;
+        Log.d("MSG2", "Destroyed");
     }
 }
 
@@ -579,7 +589,7 @@ class CustomAdapter extends BaseAdapter{
     @Override
     public View getView(final int position, View convertView, ViewGroup parent) {
         LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
-        View gridItem;
+        final View gridItem;
         if(convertView == null){
             gridItem = (View) inflater.inflate(R.layout.item, null);
 
@@ -589,11 +599,9 @@ class CustomAdapter extends BaseAdapter{
         }
         Node temp = nodeList.get(position);
         gridItem.setTag("Node:" + nodeList.get(position).nodeId);
-        if(temp.rStat){
-            gridItem.setBackgroundResource(R.drawable.greyborder);
-        }else{
-            gridItem.setBackgroundResource(R.drawable.redborder);
-        }
+
+        gridItem.setBackgroundResource(R.drawable.greyborder);
+
 
         gridItem.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -604,20 +612,31 @@ class CustomAdapter extends BaseAdapter{
                 Node temp = MainActivity.getNodeObject(id);
                 if(temp.rStat){
                     temp.rStat = false;
-                    v.setBackgroundResource(R.drawable.redborder);
                 }else{
                     temp.rStat = true;
-                    v.setBackgroundResource(R.drawable.greyborder);
                 }
                 MainActivity.adapter.notifyDataSetChanged();
                 MainActivity.sendNodeStat(temp);
             }
         });
 
+        gridItem.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(context, "Long Clicked", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+        });
+
         TextView head = (TextView)gridItem.findViewWithTag("text");
-        head.setText("Hello: " + temp.nodeId);
-        TextView detail = (TextView)gridItem.findViewWithTag("detail");
-        detail.setText("R: " + temp.rStat + ", C: " + temp.conStat);
+        head.setText(temp.nodeName);
+        head.setBackgroundColor(Color.LTGRAY);
+        ImageView image = (ImageView)gridItem.findViewWithTag("imageStat");
+        if(temp.rStat)
+            image.setImageResource(R.drawable.on128);
+        else
+            image.setImageResource(R.drawable.off128);
+
         return gridItem;
     }
 }

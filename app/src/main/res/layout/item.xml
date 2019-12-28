@@ -10,13 +10,25 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textAlignment="center"
-        android:tag="text"/>
+        android:tag="text"
+        android:textSize="22sp"
+        android:padding="10dp"/>
+
+    <ImageView
+        android:tag="imageStat"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:layout_gravity="center"></ImageView>
 
     <TextView
         android:tag="detail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAlignment="center">
+        android:textAlignment="center"
+        android:textSize="14sp"
+        android:padding="10dp"
+        android:visibility="gone">
     </TextView>
 
 </LinearLayout>
