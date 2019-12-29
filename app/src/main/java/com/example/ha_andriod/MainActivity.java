@@ -142,8 +142,11 @@ public class MainActivity extends AppCompatActivity {
 
     void getNodeList(){
         nodes.clear();
+
+        Log.d("MSG2", "Nodes Cleared, size: " + nodes.size());
         Node.nodeCount = 0;
         printNodeList();
+        adapter.notifyDataSetChanged();
         Log.d("MSG2", "Asking for NODE lIST");
         dataToSend = "client@app$action@getnodelist$0$" + id + "$APP$1$0$";
         new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
