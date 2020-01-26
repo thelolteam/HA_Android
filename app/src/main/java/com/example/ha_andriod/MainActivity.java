@@ -1,6 +1,5 @@
 package com.example.ha_andriod;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -9,7 +8,6 @@ import android.Manifest;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -37,6 +35,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
@@ -46,7 +45,6 @@ import java.net.Socket;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,16 +52,14 @@ public class MainActivity extends AppCompatActivity {
     static int width;
     static int height;
 
-    ImageButton settings;
+    ImageButton settings, refresh, wifiStat;
     GridView grid;
-    LayoutInflater inflater;
-    View item;
     static CustomAdapter adapter;
 
     int id = -1;
     LocationManager locationManager;
     boolean gps_enabled = false;
-    Intent locationIntent;
+    Intent locationIntent, wifiIntent;
 
     boolean mustStopSSIDCheck = false;
 
@@ -82,20 +78,37 @@ public class MainActivity extends AppCompatActivity {
     static ArrayList<Node> nodes = new ArrayList<Node>();
     static Iterator iterator;
 
+    static float density;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        density = this.getResources().getDisplayMetrics().density;
         locationManager = (LocationManager)getApplicationContext().getSystemService(getApplicationContext().LOCATION_SERVICE);
         locationIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+        wifiIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
 
         settings = findViewById(R.id.setting);
+        wifiStat = findViewById(R.id.wifiStat);
+        refresh = findViewById(R.id.refresh);
+        refresh.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                handshakeTry();
+            }
+        });
+
+        wifiStat.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(wifiIntent);
+            }
+        });
 
         getLocationAccess();
         Log.d("MSG", "Location Done");
-
-        handshakeTry();
 
         grid  = findViewById(R.id.grid);
         adapter = new CustomAdapter(MainActivity.this, nodes);
@@ -138,6 +151,8 @@ public class MainActivity extends AppCompatActivity {
                 dialog.show();
             }
         });
+
+        handshakeTry();
     }
 
     void getNodeList(){
@@ -151,12 +166,14 @@ public class MainActivity extends AppCompatActivity {
         dataToSend = "client@app$action@getnodelist$0$" + id + "$APP$1$0$";
         new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
         Log.d("MSG2", "Connect called");
+
     }
 
     void handshakeTry(){
         Log.d("MSG2", "Trying handshake");
         handshake = false;
         hTaskRunning = true;
+        pauseWaitTask = true;
         new HandshakeTask().execute();
     }
 
@@ -166,13 +183,16 @@ public class MainActivity extends AppCompatActivity {
         URL url;
         String data = "client@app$action@config$0$0$APP$0$0$";
         Socket socket = null;
+        ServerSocket serverSocket = null;
         private ProgressDialog progressDialog;
+        boolean ss = false;
 
         @Override
         protected void onPreExecute() {
             progressDialog = new ProgressDialog(MainActivity.this);
             progressDialog.setMessage("Connecting....");
             progressDialog.show();
+            Log.d("MSG2", "Dialog started");
         }
 
         @Override
@@ -187,10 +207,12 @@ public class MainActivity extends AppCompatActivity {
                 Log.d("MSG2", "Res Code: " + resCode);
                 if(resCode == 200){
                     con.disconnect();
-                    ServerSocket serverSocket = new ServerSocket(8080);
+                    serverSocket = new ServerSocket(8080);
+                    ss = true;
                     serverSocket.setSoTimeout(10000);
                     Log.d("MSG2", "Socket Open");
                     socket = serverSocket.accept();
+                    Log.d("MSG2", "Connected");
                     BufferedReader br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     getRequest = br.readLine();
                     PrintStream ps = new PrintStream(socket.getOutputStream());
@@ -224,11 +246,20 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (Exception e) {
                 Log.d("MSG2", "HandShake E: " + e.getMessage());
-                e.printStackTrace();
+                try {
+                    if(ss){
+                        serverSocket.close();
+                        Log.d("MSG2", "Failed open server socket closed");
+                    }
+
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
             }finally{
                 hTaskRunning = false;
                 Log.d("MSG2", "HTaskRunning: " + hTaskRunning);
             }
+            Log.d("MSG2", "Here");
             return null;
         }
 
@@ -239,11 +270,15 @@ public class MainActivity extends AppCompatActivity {
             }
             if(!handshake){
                 Log.d("MSG2", "Failed handshake");
-                showDialog();
+                wifiStat.setImageResource(R.drawable.wifiof24);
+                nodes.clear();
+                adapter.notifyDataSetChanged();
             }else{
+                wifiStat.setImageResource(R.drawable.wifion24);
                 Log.d("MSG2", "Success handshake");
+                mustStopSSIDCheck = false;
                 //start ssidcheckthread.
-                new KeepCheckingSSID().execute();
+                new KeepCheckingSSID().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 waitForConnection();
                 //refresh node list
                 getNodeList();
@@ -311,9 +346,11 @@ public class MainActivity extends AppCompatActivity {
                 inetAddress = InetAddress.getLocalHost();
                 serverSocket = new ServerSocket(port);
                 serverSocket.setSoTimeout(1000);
+                Log.d("MSG2", "Wait Started");
                 while(!pauseWaitTask){
                     try{
                         socket = serverSocket.accept();
+                        Log.d("MSG2", "Someone Connected");
                         br = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                         getRequest = br.readLine();
                         ps = new PrintStream(socket.getOutputStream());
@@ -357,6 +394,7 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(Void voids){
+            Log.d("MSG2", "Decode, handshake: " + decode + ", " + handshake);
             if(handshake && decode) {
                 new DecodeParamaters().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
                 waitForConnection();
@@ -365,13 +403,19 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    void printNodeList(){
+    static void printNodeList(){
         iterator = nodes.iterator();
         Log.d("MSG2", "-----------------------------------------------");
-        Log.d("MSG2", "ID Name    Cstat RStat Type");
+        Log.d("MSG2", "ARRAYList Size: " + nodes.size());
+        Log.d("MSG2", "ID Name    Cstat RStat Type Actions");
         while(iterator.hasNext()){
             Node temp = (Node)iterator.next();
             Log.d("MSG2", temp.nodeId + " " + temp.nodeName + " " + temp.conStat + " " + temp.rStat + " " + temp.type);
+            if(temp.type == 3){
+                for(int i=0; i<temp.irActions.size(); i++){
+                    Log.d("MSG2", temp.irActions.get(i));
+                }
+            }
         }
         Log.d("MSG2", "-----------------------------------------------");
     }
@@ -403,7 +447,16 @@ public class MainActivity extends AppCompatActivity {
             c = 1;
         if(node.rStat)
             r = 1;
-        String dataToSend = "client@app$action@stat$0$" + node.nodeId + "$" + node.nodeName + "$" + c + "$" + r + "$";
+        String name = node.nodeName;
+        if(node.type == 3){
+            if(node.irActions!=null){
+                for(String temp : node.irActions){
+                    name += "_" + temp;
+                }
+                name += "_";
+            }
+        }
+        String dataToSend = "client@app$action@stat$0$" + node.nodeId + "$" + name + "$" + c + "$" + r + "$";
         Log.d("MSG2", "Sendig Node STat");
         connectTask = (ConnectTask) new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
     }
@@ -432,7 +485,28 @@ public class MainActivity extends AppCompatActivity {
                     c = true;
                 if(Integer.parseInt(reqParameters[6]) == 1)
                     r = true;
-                newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), Integer.parseInt(reqParameters[2]), c, r);
+                int type = Integer.parseInt((reqParameters[2]));
+                if(type==2){
+                    newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), type, c, r);
+                }else if(type==3){
+                    String name = reqParameters[4];
+                    int i = name.indexOf("_");
+                    Log.d("MSG2", "i: " + i);
+                    String irNames[] = null;
+                    if(i!=-1){
+                        Log.d("MSG2", "IN");
+                        String temp = name;
+                        name = name.substring(0, i);
+                        i++;
+                        temp = temp.substring(i);
+                        Log.d("MSG2", "Temp: " + temp);
+                        irNames = temp.split("_");
+                    }
+                    Log.d("MSG2", "here");
+                    newNode = new Node(name, Integer.parseInt(reqParameters[3]), type, c, r, irNames);
+                    Log.d("MSG2", "Decode Complete");
+                }
+
                 Log.d("MSG2", "incoming Node temp created");
                 if(isPresent(Integer.parseInt(reqParameters[3]))){
                     Log.d("MSG2", "Setting stat, node present");
@@ -487,10 +561,14 @@ public class MainActivity extends AppCompatActivity {
                     currssid = wi.getSSID();
 
                     if(!currssid.equals(ssid)){
+                        Log.d("MSG2", "SSID Incorrect");
                         mustStopSSIDCheck = true;
                         handshake = false;
+                    }else{
+                       // Log.d("MSG2", "Correct SSID");
                     }
                 }else{
+                    Log.d("MSG2", "SSID Incorrect");
                     handshake = false;
                     mustStopSSIDCheck = true;
                 }
@@ -507,7 +585,10 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void voids){
             if(!handshake) {
                 pauseWaitTask = true;
-                showDialog();
+                //showDialog();
+                wifiStat.setImageResource(R.drawable.wifiof24);
+                nodes.clear();
+                adapter.notifyDataSetChanged();
             }
         }
     }
@@ -560,29 +641,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private void showDialog(){
-        AlertDialog.Builder builder;
-
-        builder = new AlertDialog.Builder(this);
-
-        builder.setMessage("Unable to Register To ESP, Check Connection").setCancelable(false).setPositiveButton("Try Again", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                dialog.cancel();
-                handshakeTry();
-            }
-        }).setNegativeButton("Exit", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                dialog.cancel();
-                finish();
-            }
-        });
-        AlertDialog alert = builder.create();
-        alert.setTitle("Connection Error!");
-        alert.show();
-    }
 
     @Override
     protected void onRestart(){
@@ -596,6 +654,8 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         pauseWaitTask = true;
         mustStopSSIDCheck = true;
+        //To stop any ConnectTask if active.
+        connectionSuccess = true;
         Log.d("MSG2", "Destroyed");
     }
 }
@@ -607,6 +667,7 @@ class Node{
     boolean rStat, conStat;
     int nodeId;
     int type;
+    ArrayList<String> irActions;
 
     Node(String name, int id, int type, boolean conStat, boolean rStat){
         nodeName = name;
@@ -614,6 +675,33 @@ class Node{
         this.type = type;
         this.rStat = rStat;
         this.conStat = conStat;
+    }
+
+    Node(String name, int id, int type, boolean conStat, boolean rStat, String[] irNames){
+        nodeName = name;
+        this.nodeId = id;
+        this.type = type;
+        this.rStat = rStat;
+        this.conStat = conStat;
+
+        irActions = new ArrayList<String>();
+        Log.d("MSg2", "C1");
+        if(irNames!=null){
+            for(String temp : irNames){
+                irActions.add(temp);
+            }
+            Log.d("MSG2", "Node Created");
+        }
+
+    }
+
+    Node(Node node){
+        this.irActions = node.irActions;
+        this.conStat = node.conStat;
+        this.nodeName = node.nodeName;
+        this.nodeId = node.nodeId;
+        this.type = node.type;
+        this.rStat = node.rStat;
     }
 }
 
@@ -646,23 +734,32 @@ class CustomAdapter extends BaseAdapter{
         LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         final View gridItem;
         if(convertView == null){
-            gridItem = (View) inflater.inflate(R.layout.item, null);
-
-
+            gridItem = inflater.inflate(R.layout.item, null);
         }else{
-            gridItem = (View) convertView;
+            gridItem = convertView;
         }
-        Node temp = nodeList.get(position);
+        final Node nodeObject = nodeList.get(position);
         gridItem.setTag("Node:" + nodeList.get(position).nodeId);
-
         gridItem.setBackgroundResource(R.drawable.greyborder);
+        LinearLayout tapMe = gridItem.findViewById(R.id.tapMe);
+        tapMe.setTag("NodeTapMe:" + nodeList.get(position).nodeId);
+        TextView head = tapMe.findViewById(R.id.head);
+        head.setText(nodeObject.nodeName);
+        head.setBackgroundColor(Color.LTGRAY);
+        ImageView image = tapMe.findViewById(R.id.imageStat);
+        LinearLayout action = gridItem.findViewById(R.id.actions);
+        if(nodeObject.type==2){
+            Log.d("MSG2", "NODE Type 2: " + nodeObject.nodeName);
+            if(nodeObject.rStat)
+                image.setImageResource(R.drawable.on128);
+            else
+                image.setImageResource(R.drawable.off128);
 
-
-        gridItem.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+            tapMe.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
                 String tag = v.getTag().toString();
-                tag = tag.substring(5);
+                tag = tag.substring(10);
                 int id = Integer.parseInt(tag);
                 Node temp = MainActivity.getNodeObject(id);
                 if(temp.rStat){
@@ -670,52 +767,83 @@ class CustomAdapter extends BaseAdapter{
                 }else{
                     temp.rStat = true;
                 }
-                MainActivity.adapter.notifyDataSetChanged();
+                notifyDataSetChanged();
                 MainActivity.sendNodeStat(temp);
-            }
-        });
+                }
+            });
+            image.setVisibility(View.VISIBLE);
+            action.setVisibility(View.GONE);
+        }else if(nodeObject.type == 3){
+            Log.d("MSG2", "NODE Type 3: " + nodeObject.nodeName);
 
-        gridItem.setOnLongClickListener(new View.OnLongClickListener() {
+            int n = nodeObject.irActions.size();
+            int mark = 0;
+            while(n>0){
+                mark++;
+                n -= 2;
+            }
+            Log.d("MSG2", "mark: " + mark);
+            int height = (int)MainActivity.density * (105);
+            ViewGroup.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, height*mark);
+            action.setLayoutParams(params);
+            image.setVisibility(View.GONE);
+            action.setVisibility(View.VISIBLE);
+            CustomAdapterIR adapterIR = new CustomAdapterIR(context, nodeObject.irActions, nodeObject);
+            GridView innerGrid = action.findViewById(R.id.innerGrid);
+            innerGrid.setAdapter(adapterIR);
+        }
+
+        tapMe.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                //Toast.makeText(context, "Long Clicked", Toast.LENGTH_SHORT).show();
                 showNodeConfigDialog(v);
                 return true;
             }
         });
-
-        TextView head = (TextView)gridItem.findViewWithTag("text");
-        head.setText(temp.nodeName);
-        head.setBackgroundColor(Color.LTGRAY);
-        ImageView image = (ImageView)gridItem.findViewWithTag("imageStat");
-        if(temp.rStat)
-            image.setImageResource(R.drawable.on128);
-        else
-            image.setImageResource(R.drawable.off128);
 
         return gridItem;
     }
 
     public void showNodeConfigDialog(View v){
         String tag = v.getTag().toString();
-        tag = tag.substring(5);
+        tag = tag.substring(10);
         int id = Integer.parseInt(tag);
-        final Node temp = MainActivity.getNodeObject(id);
+        final Node nodeObject = MainActivity.getNodeObject(id);
 
         final Dialog dialog = new Dialog(context);
         dialog.setContentView(R.layout.nodeconfig);
-        dialog.setTitle("Node Config");
+        dialog.setTitle("Node Configuration");
         final Spinner spinner = dialog.findViewById(R.id.nodeNameSpinner);
 
-        if(temp.nodeName.equals("Light"))
+        if(nodeObject.nodeName.equals("Light"))
             spinner.setSelection(0);
-        else if(temp.nodeName.equals("Fan"))
+        else if(nodeObject.nodeName.equals("Fan"))
             spinner.setSelection(1);
-        else if(temp.nodeName.equals("TV"))
+        else if(nodeObject.nodeName.equals("TV"))
             spinner.setSelection(2);
         else
             spinner.setSelection(3);
 
+        Button addAction = dialog.findViewById(R.id.addaction);
+        if(nodeObject.type == 3){
+            final Node temp = new Node(nodeObject);
+            TextView irsteps = dialog.findViewById(R.id.irsteps);
+            irsteps.setVisibility(View.VISIBLE);
+            GridView irActionEditGrid = dialog.findViewById(R.id.editIRGrid);
+            final CustomAdapterIREditor adapterIREditor = new CustomAdapterIREditor(context, temp.irActions, temp);
+            irActionEditGrid.setAdapter(adapterIREditor);
+
+            addAction.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String newAction = "(New)";
+                    temp.irActions.add(newAction);
+                    adapterIREditor.notifyDataSetChanged();
+                }
+            });
+        }else{
+            addAction.setVisibility(View.GONE);
+        }
         Button saveBtn = dialog.findViewById(R.id.saveBtn);
         Button discardBtn = dialog.findViewById(R.id.discardBtn);
 
@@ -723,12 +851,12 @@ class CustomAdapter extends BaseAdapter{
             @Override
             public void onClick(View v) {
                 if(spinner.getSelectedItemPosition() == 3)
-                    temp.nodeName = "Node";
+                    nodeObject.nodeName = "Node";
                 else
-                    temp.nodeName = spinner.getSelectedItem().toString();
+                    nodeObject.nodeName = spinner.getSelectedItem().toString();
                 dialog.dismiss();
                 MainActivity.adapter.notifyDataSetChanged();
-                MainActivity.sendNodeStat(temp);
+                MainActivity.sendNodeStat(nodeObject);
             }
         });
 
@@ -742,3 +870,180 @@ class CustomAdapter extends BaseAdapter{
         dialog.show();
     }
 }
+
+class CustomAdapterIR extends BaseAdapter{
+    ArrayList<String> irActions;
+    private Context context;
+    Node nodeObject;
+
+    CustomAdapterIR(Context context, ArrayList<String> irActions, Node nodeObject){
+        this.context = context;
+        this.irActions = irActions;
+        this.nodeObject = nodeObject;
+    }
+
+    @Override
+    public int getCount() {
+        return irActions.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return irActions.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return 0;
+    }
+
+    @Override
+    public View getView(final int position, View convertView, ViewGroup parent) {
+        LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        final View IRGridItem;
+        if(convertView == null){
+            IRGridItem = inflater.inflate(R.layout.iractionlayout, null);
+        }else{
+            IRGridItem = convertView;
+        }
+        //IRGridItem.setTag(nodeObject.nodeName + ":" + irActions.get(position));
+        TextView textView = IRGridItem.findViewById(R.id.actionText);
+        textView.setText(irActions.get(position));
+        //To improve look, you can add button instead of textview and apply onclick event on that
+        IRGridItem.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String message;
+                message = "client@app$action@task$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
+                new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+            }
+        });
+        return IRGridItem;
+    }
+}
+
+class CustomAdapterIREditor extends BaseAdapter{
+    ArrayList<String> irActions;
+    private Context context;
+    Node nodeObject;
+
+    CustomAdapterIREditor(Context context, ArrayList<String> irActions, Node nodeObject){
+        this.context = context;
+        this.irActions = irActions;
+        this.nodeObject = nodeObject;
+    }
+
+    @Override
+    public int getCount() {
+        return irActions.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return irActions.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return 0;
+    }
+
+    @Override
+    public View getView(final int position, View convertView, ViewGroup parent) {
+        String action = irActions.get(position);
+        Log.d("MSG2", "For: " + irActions.get(position));
+        LayoutInflater inflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        final View IREditorGridItem;
+        if(action.equals("(New)")){
+            Log.d("MSG2", "new");
+            IREditorGridItem = inflater.inflate(R.layout.iraddaction, null);
+            final EditText actionName = IREditorGridItem.findViewById(R.id.actionName);
+            actionName.setHint(irActions.get(position));
+            Log.d("MSG@", "Edit text ");
+            Button record = IREditorGridItem.findViewById(R.id.recordIr);
+            Button save = IREditorGridItem.findViewById(R.id.saveIr);
+            Log.d("MSG@", "TBN");
+            record.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String message = "client@app$action@recordIR$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
+                    new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+                }
+            });
+
+            save.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    nodeObject.irActions.set(position, actionName.getText().toString());
+                    irActions.set(position, actionName.getText().toString());
+
+                    Log.d("MSG2", "NODE OBJE After");
+                    if(nodeObject.type == 3){
+                        for(int i=0; i<nodeObject.irActions.size(); i++){
+                            Log.d("MSG2", nodeObject.irActions.get(i));
+                        }
+                    }
+
+                    Node original = MainActivity.getNodeObject(nodeObject.nodeId);
+                    original = nodeObject;
+                    Log.d("MSG2", "OG OBJE After");
+                    if(original.type == 3){
+                        for(int i=0; i<original.irActions.size(); i++){
+                            Log.d("MSG2", original.irActions.get(i));
+                        }
+                    }
+                    notifyDataSetChanged();
+                    String message = "client@app$action@saveIR$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
+                    new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+                }
+            });
+        }else{
+            Log.d("MSG2", "old");
+            IREditorGridItem = (View) inflater.inflate(R.layout.irshow, null);
+            final TextView actionName = IREditorGridItem.findViewById(R.id.actionName);
+            actionName.setText(irActions.get(position));
+        }
+        ImageButton remove = IREditorGridItem.findViewById(R.id.removeAction);
+        remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String message = "client@app$action@remove$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
+                nodeObject.irActions.remove(irActions.get(position));
+                Log.d("MSG2", "Removed from node obj, irac:" + irActions.size());
+                //irActions.remove(irActions.get(position));
+
+                Node original = MainActivity.getNodeObject(nodeObject.nodeId);
+                original = nodeObject;
+                notifyDataSetChanged();
+
+                new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+            }
+        });
+        Log.d("MSg2", "Temp OBJEct: " + nodeObject.irActions.size());
+        return IREditorGridItem;
+    }
+}
+
+/*private void showDialog(){
+        AlertDialog.Builder builder;
+
+        builder = new AlertDialog.Builder(this);
+
+        builder.setMessage("Unable to Register To ESP, Check Connection").setCancelable(false).setPositiveButton("Try Again", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+
+                dialog.cancel();
+                handshakeTry();
+            }
+        }).setNegativeButton("Exit", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+                finish();
+            }
+        });
+        AlertDialog alert = builder.create();
+        alert.setTitle("Connection Error!");
+        alert.show();
+    }*/

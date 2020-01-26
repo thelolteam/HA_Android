@@ -3,8 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="12dp">
-
+    android:padding="5dp">
 
     <Spinner
         android:entries="@array/nodeNameList"
@@ -15,22 +14,52 @@
         android:padding="5dp">
     </Spinner>
 
-    <Space
-        android:layout_width="match_parent"
+
+    <LinearLayout
         android:layout_height="0dp"
-        android:layout_weight="9"></Space>
+        android:layout_width="match_parent"
+        android:id="@+id/irActionLayout"
+        android:orientation="vertical"
+        android:layout_weight="6">
+
+        <TextView
+            android:id="@+id/irsteps"
+            android:text="@string/irsteps"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone">
+
+        </TextView>
+        <Button
+            android:id="@+id/addaction"
+            android:text="Add Action"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content">
+
+        </Button>
+
+        <GridView
+            android:layout_width="match_parent"
+            android:numColumns="1"
+            android:verticalSpacing="5dp"
+            android:id="@+id/editIRGrid"
+            android:padding="5dp"
+            android:layout_height="wrap_content">
+
+        </GridView>
+
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="end">
 
         <Button
             android:id="@+id/saveBtn"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:text="Save">
 
         </Button>
@@ -38,13 +67,10 @@
         <Button
             android:id="@+id/discardBtn"
             android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:text="Discard">
 
         </Button>
 
     </LinearLayout>
-
-
-
 </LinearLayout>

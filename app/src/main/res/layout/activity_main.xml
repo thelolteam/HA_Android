@@ -15,6 +15,22 @@
         android:padding="5dp">
 
         <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:id="@+id/refresh"
+            android:src="@drawable/refresh24">
+
+        </ImageButton>
+
+        <ImageButton
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:id="@+id/wifiStat"
+            android:src="@drawable/wifiof24">
+
+        </ImageButton>
+
+        <ImageButton
             android:src="@drawable/settings24"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"

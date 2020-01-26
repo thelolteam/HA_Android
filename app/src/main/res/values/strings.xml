@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">HA_Andriod</string>
+    <string name="irsteps">Press the Record button. Point your Remote at the Node and press the button on remote to record the data in Node. Wait for 5 seconds. The node will then send the recorded code to destination device. If the action works, press SAVE else, record again.</string>
     <string-array name="nodeNameList">
         <item>Light</item>
         <item>Fan</item>

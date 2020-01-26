@@ -1,25 +1,53 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="0dp"
-    android:layout_height="match_parent"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
     android:clickable="true"
     android:padding="5dp">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:tag="text"
-        android:textSize="22sp"
-        android:padding="10dp"/>
+        android:orientation="vertical"
+        android:id="@+id/tapMe"
+        android:clickable="true">
 
-    <ImageView
-        android:tag="imageStat"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="10dp"
-        android:layout_gravity="center"></ImageView>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:id="@+id/head"
+            android:textSize="22sp"
+            android:padding="10dp"/>
+
+        <ImageView
+            android:id="@+id/imageStat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:layout_gravity="center"></ImageView>
+
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/actions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <GridView
+
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:numColumns="2"
+            android:padding="10dp"
+            android:id="@+id/innerGrid"
+            android:horizontalSpacing="10dp"
+            android:verticalSpacing="10dp">
+
+        </GridView>
+
+    </LinearLayout>
+
 
 
 </LinearLayout>
