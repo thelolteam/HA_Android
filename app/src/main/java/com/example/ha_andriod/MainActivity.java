@@ -815,11 +815,11 @@ class CustomAdapter extends BaseAdapter{
         dialog.setTitle("Node Configuration");
         final Spinner spinner = dialog.findViewById(R.id.nodeNameSpinner);
 
-        if(nodeObject.nodeName.equals("Light"))
+        if(nodeObject.nodeName.equalsIgnoreCase("Light"))
             spinner.setSelection(0);
-        else if(nodeObject.nodeName.equals("Fan"))
+        else if(nodeObject.nodeName.equalsIgnoreCase("AC"))
             spinner.setSelection(1);
-        else if(nodeObject.nodeName.equals("TV"))
+        else if(nodeObject.nodeName.equalsIgnoreCase("TV"))
             spinner.setSelection(2);
         else
             spinner.setSelection(3);
