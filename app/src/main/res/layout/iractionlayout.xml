@@ -6,14 +6,15 @@
     android:orientation="vertical"
     android:clickable="true"
     android:gravity="center"
-    android:background="@drawable/background">
+    android:background="@drawable/whiteborder">
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:id="@+id/actionText"
-
-        android:textAlignment="center">
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:layout_gravity="center_horizontal">
     </TextView>
 
 </LinearLayout>

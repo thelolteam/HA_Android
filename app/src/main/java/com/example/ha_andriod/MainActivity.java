@@ -30,7 +30,6 @@ import android.widget.GridView;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.io.Serializable;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -52,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
     static int width;
     static int height;
 
-    ImageButton settings, refresh, wifiStat;
+    ImageButton refresh, wifiStat, settings, routineBtn;
     GridView grid;
     static CustomAdapter adapter;
 
@@ -73,6 +73,7 @@ public class MainActivity extends AppCompatActivity {
 
     boolean handshake = false;
     boolean hTaskRunning = false;
+    boolean connectedToMaster = false;
     String dataToSend;
 
     static ArrayList<Node> nodes = new ArrayList<Node>();
@@ -84,19 +85,31 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        setTitle("Home Automation");
         density = this.getResources().getDisplayMetrics().density;
         locationManager = (LocationManager)getApplicationContext().getSystemService(getApplicationContext().LOCATION_SERVICE);
         locationIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
         wifiIntent = new Intent(Settings.ACTION_WIFI_SETTINGS);
 
-        settings = findViewById(R.id.setting);
         wifiStat = findViewById(R.id.wifiStat);
         refresh = findViewById(R.id.refresh);
+        settings = findViewById(R.id.settings);
+        routineBtn = findViewById(R.id.routineBtn);
+        settings.setVisibility(View.INVISIBLE);
+        routineBtn.setVisibility(View.INVISIBLE);
+
         refresh.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 handshakeTry();
+            }
+        });
+
+        refresh.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(MainActivity.this, "Refresh List", Toast.LENGTH_SHORT).show();
+                return true;
             }
         });
 
@@ -106,6 +119,88 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(wifiIntent);
             }
         });
+
+        wifiStat.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(MainActivity.this, "WiFi Options", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+        });
+
+        settings.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(MainActivity.this, "Configure Raspberry Pi", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+        });
+
+        settings.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                final Dialog dialog = new Dialog(MainActivity.this);
+                dialog.setContentView(R.layout.settings);
+                dialog.setTitle("Node Configuration");
+
+                final EditText ssidView = dialog.findViewById(R.id.ssid);
+                final EditText passView = dialog.findViewById(R.id.password);
+                Button save = dialog.findViewById(R.id.saveBtn);
+                Button discard = dialog.findViewById(R.id.discardBtn);
+                final TextView alert = dialog.findViewById(R.id.alert);
+
+                save.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        String ssid = ssidView.getText().toString();
+                        String password = passView.getText().toString();
+                        ssid.trim();
+                        password.trim();
+                        if(ssid.length() < 3 || password.length()<8 || password.length()>63){
+                            alert.setVisibility(View.VISIBLE);
+                            alert.setText("Password Length: 8 - 63 Characters\nSSID Length: > 3 Characters");
+                        }else{
+                            alert.setVisibility(View.INVISIBLE);
+                            String message = "client@app$action@wificonfig$" + ssid + "$" + password + "$";
+                            new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+                            dialog.dismiss();
+                        }
+                    }
+                });
+
+                discard.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        dialog.dismiss();
+                    }
+                });
+
+
+                dialog.getWindow().setLayout(9*(MainActivity.width/10), Math.max((MainActivity.height/3), 700));
+                dialog.show();
+            }
+        });
+
+        routineBtn.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View v) {
+                Toast.makeText(MainActivity.this, "Open Routines Screen", Toast.LENGTH_SHORT).show();
+                return true;
+            }
+        });
+
+        routineBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //launch routine intent
+                Intent routines = new Intent(getApplicationContext(), Routines.class);
+                //Log.d("MSG2", "Here1");
+                //routines.putExtra("nodeList", nodes);
+                //Log.d("MSG2", "Here2");
+                startActivity(routines);
+            }
+        });
+
 
         getLocationAccess();
         Log.d("MSG", "Location Done");
@@ -117,47 +212,11 @@ public class MainActivity extends AppCompatActivity {
         metrics = getResources().getDisplayMetrics();
         width = metrics.widthPixels;
         height = metrics.heightPixels;
-
-        settings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final Dialog dialog = new Dialog(MainActivity.this);
-                dialog.setContentView(R.layout.settings);
-                Button saveBtn = dialog.findViewById(R.id.saveBtn);
-                Button discardBtn = dialog.findViewById(R.id.discardBtn);
-
-                saveBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        EditText temp = dialog.findViewById(R.id.ssid);
-                        String ssid = temp.getText().toString();
-                        temp = dialog.findViewById(R.id.password);
-                        String password = temp.getText().toString();
-
-                        dialog.dismiss();
-
-                        String dataToSend = "client@app$action@apconfig$" + ssid + "$" + password + "$";
-                        new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
-                    }
-                });
-
-                discardBtn.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        dialog.dismiss();
-                    }
-                });
-                dialog.getWindow().setLayout(7*(width/8), 5*(height/6));
-                dialog.show();
-            }
-        });
-
         handshakeTry();
     }
 
     void getNodeList(){
         nodes.clear();
-
         Log.d("MSG2", "Nodes Cleared, size: " + nodes.size());
         Node.nodeCount = 0;
         printNodeList();
@@ -170,10 +229,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void handshakeTry(){
+        pauseWaitTask = true;
         Log.d("MSG2", "Trying handshake");
         handshake = false;
         hTaskRunning = true;
-        pauseWaitTask = true;
+
         new HandshakeTask().execute();
     }
 
@@ -198,10 +258,16 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected Void doInBackground(Void... voids) {
             try {
-                url = new URL("http://192.168.1.1:8080/message?data=" + data);
+                try {
+                    Thread.sleep(500);
+                    Log.d("MSG2", "PauseTask: " + pauseWaitTask);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                url = new URL("http://192.168.4.1:8080/message?data=" + data);
                 Log.d("MSG2", "URL: " + url);
                 con = (HttpURLConnection)url.openConnection();
-                con.setConnectTimeout(7000);
+                con.setConnectTimeout(2000);
                 con.connect();
                 int resCode = con.getResponseCode();
                 Log.d("MSG2", "Res Code: " + resCode);
@@ -209,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
                     con.disconnect();
                     serverSocket = new ServerSocket(8080);
                     ss = true;
-                    serverSocket.setSoTimeout(10000);
+                    serverSocket.setSoTimeout(5000);
                     Log.d("MSG2", "Socket Open");
                     socket = serverSocket.accept();
                     Log.d("MSG2", "Connected");
@@ -235,6 +301,10 @@ public class MainActivity extends AppCompatActivity {
                         for(i=0; i<7; i++){
                             Log.d("MSG2", "parameter[" + i + "]: " + reqParameters[i]);
                         }
+                        if(reqParameters[0].equals("client@rpi"))
+                            connectedToMaster = true;
+                        else
+                            connectedToMaster = false;
                         id = Integer.parseInt(reqParameters[3]);
                         Log.d("MSG2", "ID: " + id);
                         if(id!=-1)
@@ -274,6 +344,15 @@ public class MainActivity extends AppCompatActivity {
                 nodes.clear();
                 adapter.notifyDataSetChanged();
             }else{
+                if(connectedToMaster) {
+                    settings.setVisibility(View.VISIBLE);
+                    routineBtn.setVisibility(View.VISIBLE);
+                }
+                else{
+                    settings.setVisibility(View.INVISIBLE);
+                    routineBtn.setVisibility(View.INVISIBLE);
+                }
+
                 wifiStat.setImageResource(R.drawable.wifion24);
                 Log.d("MSG2", "Success handshake");
                 mustStopSSIDCheck = false;
@@ -299,7 +378,7 @@ public class MainActivity extends AppCompatActivity {
             connectionSuccess = false;
             while(!connectionSuccess){
                 try {
-                    url = new URL("http://192.168.1.1:8080/message?data=" + data);
+                    url = new URL("http://192.168.4.1:8080/message?data=" + data);
                     Log.d("MSG2", "URL: " + url);
                     con = (HttpURLConnection)url.openConnection();
                     con.connect();
@@ -407,10 +486,10 @@ public class MainActivity extends AppCompatActivity {
         iterator = nodes.iterator();
         Log.d("MSG2", "-----------------------------------------------");
         Log.d("MSG2", "ARRAYList Size: " + nodes.size());
-        Log.d("MSG2", "ID Name    Cstat RStat Type Actions");
+        Log.d("MSG2", "ID Name    Cstat RStat Type Location Actions");
         while(iterator.hasNext()){
             Node temp = (Node)iterator.next();
-            Log.d("MSG2", temp.nodeId + " " + temp.nodeName + " " + temp.conStat + " " + temp.rStat + " " + temp.type);
+            Log.d("MSG2", temp.nodeId + " " + temp.nodeName + " " + temp.conStat + " " + temp.rStat + " " + temp.type + temp.location);
             if(temp.type == 3){
                 for(int i=0; i<temp.irActions.size(); i++){
                     Log.d("MSG2", temp.irActions.get(i));
@@ -456,7 +535,7 @@ public class MainActivity extends AppCompatActivity {
                 name += "_";
             }
         }
-        String dataToSend = "client@app$action@stat$0$" + node.nodeId + "$" + name + "$" + c + "$" + r + "$";
+        String dataToSend = "client@app$action@stat$0$" + node.nodeId + "$" + name + "$" + c + "$" + r + "$" + node.location + "$";
         Log.d("MSG2", "Sendig Node STat");
         connectTask = (ConnectTask) new ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, dataToSend);
     }
@@ -474,7 +553,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     class DecodeParamaters extends AsyncTask<Void, Void, Void>{
-        boolean change = false;
+        boolean change = false, reconfig = false;
         Node newNode = null;
         @Override
         protected Void doInBackground(Void... voids) {
@@ -487,7 +566,7 @@ public class MainActivity extends AppCompatActivity {
                     r = true;
                 int type = Integer.parseInt((reqParameters[2]));
                 if(type==2){
-                    newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), type, c, r);
+                    newNode = new Node(reqParameters[4], Integer.parseInt(reqParameters[3]), type, c, r, reqParameters[7]);
                 }else if(type==3){
                     String name = reqParameters[4];
                     int i = name.indexOf("_");
@@ -503,7 +582,7 @@ public class MainActivity extends AppCompatActivity {
                         irNames = temp.split("_");
                     }
                     Log.d("MSG2", "here");
-                    newNode = new Node(name, Integer.parseInt(reqParameters[3]), type, c, r, irNames);
+                    newNode = new Node(name, Integer.parseInt(reqParameters[3]), type, c, r, irNames, reqParameters[7]);
                     Log.d("MSG2", "Decode Complete");
                 }
 
@@ -532,6 +611,10 @@ public class MainActivity extends AppCompatActivity {
                 printNodeList();
                 change = true;
             }
+            else if(reqParameters[1].equals("action@reconfig")){
+                reconfig = true;
+                Log.d("MSG2", "Reconfig");
+            }
             return null;
         }
 
@@ -539,6 +622,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void voids){
             if(change)
                 adapter.notifyDataSetChanged();
+            else if(reconfig)
+                handshakeTry();
         }
     }
 
@@ -564,8 +649,6 @@ public class MainActivity extends AppCompatActivity {
                         Log.d("MSG2", "SSID Incorrect");
                         mustStopSSIDCheck = true;
                         handshake = false;
-                    }else{
-                       // Log.d("MSG2", "Correct SSID");
                     }
                 }else{
                     Log.d("MSG2", "SSID Incorrect");
@@ -600,7 +683,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
         }
         else{
-            Toast.makeText(this,"Has Location Access", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this,"Has Location Access", Toast.LENGTH_SHORT).show();
             turnOnLocation();
         }
     }
@@ -613,11 +696,11 @@ public class MainActivity extends AppCompatActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0
                         && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    Toast.makeText(this, "Got Location Access", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "Got Location Access", Toast.LENGTH_SHORT).show();
                     Log.d("MSG2", "Got Access");
                     turnOnLocation();
                 } else {
-                    Toast.makeText(this, "App requires location access to verify connection to MODULE", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "App requires location access to verify connection to MODULE", Toast.LENGTH_SHORT).show();
                     Log.d("MSG2", "Access Denied");
                     getLocationAccess();
                 }
@@ -634,7 +717,7 @@ public class MainActivity extends AppCompatActivity {
         } catch(Exception ex) {}
         if(!gps_enabled){
             //Open Location Settings
-            Toast.makeText(this,"Location OFF", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this,"Location OFF", Toast.LENGTH_SHORT).show();
             Log.d("MSG2", "Starting gps activity");
             startActivity(locationIntent);
         }
@@ -660,29 +743,32 @@ public class MainActivity extends AppCompatActivity {
     }
 }
 
-class Node{
+class Node implements Serializable {
     public static int nodeCount;
 
     String nodeName;
     boolean rStat, conStat;
     int nodeId;
     int type;
+    String location;
     ArrayList<String> irActions;
 
-    Node(String name, int id, int type, boolean conStat, boolean rStat){
+    Node(String name, int id, int type, boolean conStat, boolean rStat, String location){
         nodeName = name;
         this.nodeId = id;
         this.type = type;
         this.rStat = rStat;
         this.conStat = conStat;
+        this.location = location;
     }
 
-    Node(String name, int id, int type, boolean conStat, boolean rStat, String[] irNames){
+    Node(String name, int id, int type, boolean conStat, boolean rStat, String[] irNames, String location){
         nodeName = name;
         this.nodeId = id;
         this.type = type;
         this.rStat = rStat;
         this.conStat = conStat;
+        this.location = location;
 
         irActions = new ArrayList<String>();
         Log.d("MSg2", "C1");
@@ -702,6 +788,7 @@ class Node{
         this.nodeId = node.nodeId;
         this.type = node.type;
         this.rStat = node.rStat;
+        this.location = node.location;
     }
 }
 
@@ -740,12 +827,18 @@ class CustomAdapter extends BaseAdapter{
         }
         final Node nodeObject = nodeList.get(position);
         gridItem.setTag("Node:" + nodeList.get(position).nodeId);
-        gridItem.setBackgroundResource(R.drawable.greyborder);
+        //gridItem.setBackgroundResource(R.drawable.whiteborder);
+
         LinearLayout tapMe = gridItem.findViewById(R.id.tapMe);
         tapMe.setTag("NodeTapMe:" + nodeList.get(position).nodeId);
         TextView head = tapMe.findViewById(R.id.head);
         head.setText(nodeObject.nodeName);
         head.setBackgroundColor(Color.LTGRAY);
+
+        TextView location = tapMe.findViewById(R.id.locationText);
+        location.setText((nodeObject.location));
+        head.setBackgroundColor(Color.LTGRAY);
+
         ImageView image = tapMe.findViewById(R.id.imageStat);
         LinearLayout action = gridItem.findViewById(R.id.actions);
         if(nodeObject.type==2){
@@ -813,16 +906,11 @@ class CustomAdapter extends BaseAdapter{
         final Dialog dialog = new Dialog(context);
         dialog.setContentView(R.layout.nodeconfig);
         dialog.setTitle("Node Configuration");
-        final Spinner spinner = dialog.findViewById(R.id.nodeNameSpinner);
-
-        if(nodeObject.nodeName.equalsIgnoreCase("Light"))
-            spinner.setSelection(0);
-        else if(nodeObject.nodeName.equalsIgnoreCase("AC"))
-            spinner.setSelection(1);
-        else if(nodeObject.nodeName.equalsIgnoreCase("TV"))
-            spinner.setSelection(2);
-        else
-            spinner.setSelection(3);
+        final EditText name, location;
+        name = dialog.findViewById(R.id.nodeName);
+        location = dialog.findViewById(R.id.nodeLocation);
+        name.setText(nodeObject.nodeName);
+        location.setText(nodeObject.location);
 
         Button addAction = dialog.findViewById(R.id.addaction);
         if(nodeObject.type == 3){
@@ -850,13 +938,30 @@ class CustomAdapter extends BaseAdapter{
         saveBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(spinner.getSelectedItemPosition() == 3)
-                    nodeObject.nodeName = "Node";
-                else
-                    nodeObject.nodeName = spinner.getSelectedItem().toString();
-                dialog.dismiss();
-                MainActivity.adapter.notifyDataSetChanged();
-                MainActivity.sendNodeStat(nodeObject);
+                String nameString = name.getText().toString().trim();
+                String locationString = location.getText().toString().trim();
+                boolean nameConstraint = false, locationConstraint = false;
+                if(nameString.length() !=0 && nameString.length() <=10 ){
+                    nameConstraint = true;
+                }
+                if(locationString.length() !=0 && locationString.length() <=10 ){
+                    locationConstraint = true;
+                }
+                if(!nameConstraint){
+                    name.setText("");
+                    name.setHint("Length must be 1 - 10");
+                }
+                if(!locationConstraint){
+                    location.setText("");
+                    location.setHint("Length must be 1 - 10");
+                }
+                if(nameConstraint && locationConstraint){
+                    nodeObject.nodeName = nameString;
+                    nodeObject.location = locationString;
+                    dialog.dismiss();
+                    MainActivity.adapter.notifyDataSetChanged();
+                    MainActivity.sendNodeStat(nodeObject);
+                }
             }
         });
 
@@ -866,7 +971,7 @@ class CustomAdapter extends BaseAdapter{
                 dialog.dismiss();
             }
         });
-        dialog.getWindow().setLayout(7*(MainActivity.width/8), 5*(MainActivity.height/6));
+        dialog.getWindow().setLayout(9*(MainActivity.width/10), 5*(MainActivity.height/6));
         dialog.show();
     }
 }
@@ -974,27 +1079,32 @@ class CustomAdapterIREditor extends BaseAdapter{
             save.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    nodeObject.irActions.set(position, actionName.getText().toString());
-                    irActions.set(position, actionName.getText().toString());
+                    if(actionName.getText().toString().trim().length() != 0){
+                        nodeObject.irActions.set(position, actionName.getText().toString().toUpperCase());
+                        irActions.set(position, actionName.getText().toString().toUpperCase());
 
-                    Log.d("MSG2", "NODE OBJE After");
-                    if(nodeObject.type == 3){
-                        for(int i=0; i<nodeObject.irActions.size(); i++){
-                            Log.d("MSG2", nodeObject.irActions.get(i));
+                        Log.d("MSG2", "NODE OBJE After");
+                        if(nodeObject.type == 3){
+                            for(int i=0; i<nodeObject.irActions.size(); i++){
+                                Log.d("MSG2", nodeObject.irActions.get(i));
+                            }
                         }
-                    }
 
-                    Node original = MainActivity.getNodeObject(nodeObject.nodeId);
-                    original = nodeObject;
-                    Log.d("MSG2", "OG OBJE After");
-                    if(original.type == 3){
-                        for(int i=0; i<original.irActions.size(); i++){
-                            Log.d("MSG2", original.irActions.get(i));
+                        Node original = MainActivity.getNodeObject(nodeObject.nodeId);
+                        original = nodeObject;
+                        Log.d("MSG2", "OG OBJE After");
+                        if(original.type == 3){
+                            for(int i=0; i<original.irActions.size(); i++){
+                                Log.d("MSG2", original.irActions.get(i));
+                            }
                         }
+                        notifyDataSetChanged();
+                        String message = "client@app$action@saveIR$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
+                        new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
                     }
-                    notifyDataSetChanged();
-                    String message = "client@app$action@saveIR$0$" + nodeObject.nodeId + "$" + nodeObject.nodeName + "$" + nodeObject.conStat + "$" + irActions.get(position) + "$";
-                    new MainActivity.ConnectTask().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, message);
+                    else{
+                        actionName.setHint("Empty!");
+                    }
                 }
             });
         }else{

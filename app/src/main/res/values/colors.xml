@@ -6,4 +6,9 @@
     <color name="red">#FF0000</color>
     <color name="gray">#A9A9A9</color>
     <color name="white">#FFFFFF</color>
+    <color name="background">#101010</color>
+    <color name="tile">#1a1a1a</color>
+    <color name="black">#000000</color>
+    <color name="A9">#A9A9A9</color>
+    <color name="F5">#F5F5F5</color>
 </resources>

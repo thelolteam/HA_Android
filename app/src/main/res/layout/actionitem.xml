@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:orientation="horizontal"
+    android:layout_height="match_parent"
+    android:background="#fff"
+    android:padding="15dp">
+
+    <TextView
+        android:id="@+id/actionname"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+
+        android:textSize="14dp"></TextView>
+
+
+    <TextView
+        android:textSize="14dp"
+        android:id="@+id/actiontarget"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent" ></TextView>
+
+
+
+    <TextView
+        android:textSize="14dp"
+        android:id="@+id/actiondelay"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent" ></TextView>
+
+    <Space
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="1"></Space>
+
+    <ImageButton
+        android:id="@+id/up"
+        android:src="@drawable/up"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="#00000000"
+        android:padding="5dp">
+    </ImageButton>
+
+    <ImageButton
+        android:id="@+id/down"
+        android:src="@drawable/down"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="#00000000"
+        android:padding="5dp">
+    </ImageButton>
+
+    <ImageButton
+        android:id="@+id/remove"
+        android:src="@drawable/delete24"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:background="#00000000"
+        android:padding="5dp">
+    </ImageButton>
+
+</LinearLayout>

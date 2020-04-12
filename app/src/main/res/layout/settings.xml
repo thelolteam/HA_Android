@@ -3,23 +3,28 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="7dp">
+    android:padding="7dp"
+    android:background="@color/background"
+    >
 
     <TextView
         android:layout_height="0dp"
         android:layout_width="match_parent"
         android:layout_weight="1"
-        android:text="To set SSID and Password of ESP Module AP in Nodes and ESP">
-
-
+        android:textSize="18dp"
+        android:textColor="@color/A9"
+        android:text="Set WiFi Parameters for Master">
     </TextView>
 
     <EditText
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:hint="Module SSID"
+        android:hint="WiFi SSID"
         android:id="@+id/ssid"
+        android:textColor="@color/F5"
+        android:textColorHint="@color/A9"
+        android:backgroundTint="@color/A9"
         android:maxLength="10">
 
     </EditText>
@@ -28,22 +33,32 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:hint="Module Password"
+        android:hint="WiFi Password"
         android:id="@+id/password"
+        android:textColor="@color/F5"
+        android:textColorHint="@color/A9"
+        android:backgroundTint="@color/A9"
         android:maxLength="10">
     </EditText>
 
-    <Space
+    <TextView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="9"></Space>
+        android:layout_weight="1"
+        android:text="Alert"
+        android:textColor="@color/white"
+        android:visibility="invisible"
+        android:id="@+id/alert">
+
+    </TextView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="horizontal"
-        android:gravity="end">
+        android:gravity="end"
+        android:layout_gravity="bottom">
 
         <Button
             android:id="@+id/saveBtn"

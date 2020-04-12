@@ -3,31 +3,50 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:background="@color/background"
     android:padding="5dp">
 
-    <Spinner
-        android:entries="@array/nodeNameList"
-        android:id="@+id/nodeNameSpinner"
+    <EditText
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:id="@+id/nodeName"
+        android:padding="5dp"
+        android:hint="Name (Light, Fan, AC, TV...)"
         android:layout_weight="1"
-        android:padding="5dp">
-    </Spinner>
+        android:layout_height="0dp"
+        android:textColor="@color/A9"
+        android:textColorHint="@color/F5"
+        android:backgroundTint="@color/A9">
 
+    </EditText>
+
+    <EditText
+        android:layout_width="match_parent"
+        android:id="@+id/nodeLocation"
+        android:padding="5dp"
+        android:hint="Location (Kitchen, Hall, Bathroom...)"
+        android:layout_weight="1"
+        android:layout_height="0dp"
+        android:textColor="@color/A9"
+        android:backgroundTint="@color/A9"
+        android:textColorHint="@color/F5">
+
+    </EditText>
 
     <LinearLayout
         android:layout_height="0dp"
         android:layout_width="match_parent"
         android:id="@+id/irActionLayout"
         android:orientation="vertical"
-        android:layout_weight="6">
+        android:layout_weight="6"
+        >
 
         <TextView
             android:id="@+id/irsteps"
             android:text="@string/irsteps"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:visibility="gone">
+            android:visibility="gone"
+            android:textColor="@color/A9">
 
         </TextView>
         <Button

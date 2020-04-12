@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
+    android:orientation="vertical"
+    android:layout_height="match_parent"
+    android:padding="5dp">
+
+    <Spinner
+        android:id="@+id/actionspinner"
+        android:padding="5dp"
+        android:layout_marginBottom="5dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dialog"
+       ></Spinner>
+
+    <Spinner
+        android:padding="5dp"
+        android:layout_marginBottom="5dp"
+        android:id="@+id/targetspinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:spinnerMode="dialog"></Spinner>
+
+    <Spinner
+        android:padding="5dp"
+        android:layout_marginBottom="5dp"
+        android:id="@+id/irspinner"
+        android:spinnerMode="dialog"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+       ></Spinner>
+
+    <EditText
+        android:layout_marginBottom="5dp"
+        android:padding="10dp"
+        android:id="@+id/delay"
+        android:hint="Delay in Seconds (Default: 0)"
+        android:layout_width="match_parent"
+        android:inputType="number"
+        android:layout_height="wrap_content"></EditText>
+    <TextView
+        android:layout_marginBottom="5dp"
+        android:padding="5dp"
+        android:id="@+id/alertform"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    </TextView>
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"></Space>
+
+    <Button
+        android:id="@+id/saveactionbtn"
+        android:layout_height="wrap_content"
+        android:layout_width="wrap_content"
+        android:layout_gravity="end"
+        android:text="Save"></Button>
+</LinearLayout>

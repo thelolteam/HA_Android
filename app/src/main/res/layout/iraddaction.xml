@@ -9,7 +9,9 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="2"
-        android:inputType="textCapSentences">
+        android:textColor="@color/A9"
+        android:backgroundTint="@color/A9"
+        android:textColorHint="@color/F5">
 
     </EditText>
 
