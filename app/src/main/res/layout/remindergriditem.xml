@@ -1,0 +1,372 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:id="@+id/display"
+        android:layout_height="wrap_content"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/title"
+                android:text="Project Work"
+                android:layout_width="match_parent"
+                android:textSize="18dp"
+                android:layout_height="match_parent"
+                android:textColor="@color/F5">
+
+            </TextView>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:layout_weight="1">
+
+            <TextView
+                android:id="@+id/time"
+                android:text="Project Work"
+                android:layout_width="match_parent"
+                android:textSize="18dp"
+                android:layout_height="match_parent"
+                android:textColor="@color/F5">
+
+            </TextView>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:layout_weight="1.2">
+
+            <TextView
+                android:tag="monday"
+                android:text="M"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:padding="5dp"
+                android:clickable="false">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="tuesday"
+                android:text="T"
+                android:layout_gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:clickable="false">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:clickable="false"
+                android:tag="wednesday"
+                android:text="W"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="thursday"
+                android:clickable="false"
+                android:text="T"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:background="@color/pink">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="friday"
+                android:clickable="false"
+                android:text="F"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:text="S"
+                android:clickable="false"
+                android:tag="saturday"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:background="@color/pink">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:text="S"
+                android:clickable="false"
+                android:tag="sunday"
+                android:layout_gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"></Space>
+
+            <ImageButton
+                android:id="@+id/deletereminder"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/whitedelete24"
+                android:background="#00000000"></ImageButton>
+
+
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/routineedit"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <EditText
+                android:layout_marginLeft="10dp"
+                android:id="@+id/titleedit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+
+            </EditText>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <ImageButton
+                android:id="@+id/savereminder"
+                android:src="@drawable/whitedone"
+                android:background="#00000000"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginRight="10dp"></ImageButton>
+
+        </LinearLayout>
+
+
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:orientation="horizontal"
+            android:layout_height="wrap_content">
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="monday"
+                android:text="M"
+                android:id="@+id/monedit"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:padding="5dp"
+                android:clickable="true">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="tuesday"
+                android:text="T"
+                android:id="@+id/tueedit"
+                android:layout_gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:clickable="true">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:clickable="true"
+                android:tag="wednesday"
+                android:text="W"
+                android:id="@+id/wededit"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="thursday"
+                android:clickable="true"
+                android:text="T"
+                android:id="@+id/thuredit"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:background="@color/pink">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:tag="friday"
+                android:clickable="true"
+                android:text="F"
+                android:padding="5dp"
+                android:id="@+id/friedit"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:text="S"
+                android:clickable="true"
+                android:id="@+id/satedit"
+                android:tag="saturday"
+                android:padding="5dp"
+                android:layout_gravity="center_vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5"
+                android:background="@color/pink">
+            </TextView>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+            <TextView
+                android:id="@+id/sunedit"
+                android:text="S"
+                android:clickable="true"
+                android:tag="sunday"
+                android:layout_gravity="center_vertical"
+                android:padding="5dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/F5">
+            </TextView>
+
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"></Space>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TimePicker
+                android:id="@+id/timep2"
+                android:timePickerMode="spinner"
+                android:theme="@style/timepickerstyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+            </TimePicker>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

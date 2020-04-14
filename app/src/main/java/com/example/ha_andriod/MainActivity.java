@@ -668,6 +668,8 @@ public class MainActivity extends AppCompatActivity {
         protected void onPostExecute(Void voids){
             if(!handshake) {
                 pauseWaitTask = true;
+                settings.setVisibility(View.INVISIBLE);
+                routineBtn.setVisibility(View.INVISIBLE);
                 //showDialog();
                 wifiStat.setImageResource(R.drawable.wifiof24);
                 nodes.clear();

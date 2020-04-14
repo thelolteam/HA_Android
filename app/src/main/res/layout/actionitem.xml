@@ -3,30 +3,40 @@
     xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent"
     android:orientation="horizontal"
     android:layout_height="match_parent"
-    android:background="#fff"
+    android:background="@color/background"
     android:padding="15dp">
 
     <TextView
         android:id="@+id/actionname"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-
+        android:textColor="@color/F5"
         android:textSize="14dp"></TextView>
 
+    <Space
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_weight="1"></Space>
 
     <TextView
+        android:textColor="@color/F5"
         android:textSize="14dp"
         android:id="@+id/actiontarget"
         android:layout_width="wrap_content"
         android:layout_height="match_parent" ></TextView>
 
+    <Space
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"></Space>
 
 
     <TextView
         android:textSize="14dp"
         android:id="@+id/actiondelay"
         android:layout_width="wrap_content"
-        android:layout_height="match_parent" ></TextView>
+        android:layout_height="match_parent"
+        android:textColor="@color/F5"></TextView>
 
     <Space
         android:layout_width="wrap_content"
@@ -35,28 +45,28 @@
 
     <ImageButton
         android:id="@+id/up"
-        android:src="@drawable/up"
+        android:src="@drawable/whiteup"
+        android:background="@color/background"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="#00000000"
         android:padding="5dp">
     </ImageButton>
 
     <ImageButton
         android:id="@+id/down"
-        android:src="@drawable/down"
+        android:src="@drawable/whitedown"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="#00000000"
+        android:background="@color/background"
         android:padding="5dp">
     </ImageButton>
 
     <ImageButton
         android:id="@+id/remove"
-        android:src="@drawable/delete24"
+        android:src="@drawable/whitedelete24"
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
-        android:background="#00000000"
+        android:background="@color/background"
         android:padding="5dp">
     </ImageButton>
 

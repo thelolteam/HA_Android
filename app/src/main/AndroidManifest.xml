@@ -18,7 +18,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".RoutineConfig"></activity>
+        <activity android:name=".Reminder"></activity>
+        <activity android:name=".RoutineConfig" />
         <activity android:name=".Routines" />
         <activity android:name=".MainActivity">
             <intent-filter>

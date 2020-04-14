@@ -244,7 +244,7 @@ public class Routines extends AppCompatActivity {
     //-------------------------------------------------------------------------------------------------------------------
 
 
-    class RequestParameters{
+    static class RequestParameters{
         String data;
         boolean post;
         JSONObject routine;
@@ -337,10 +337,10 @@ public class Routines extends AppCompatActivity {
 
                     if(current.get("type").equals("voice")){
                         head.setText("\"" + h + "\"");
-                        triggerImage.setImageResource(R.drawable.mic24);
+                        triggerImage.setImageResource(R.drawable.whitemic24);
                     }else{
                         head.setText(h);
-                        triggerImage.setImageResource(R.drawable.clock24);
+                        triggerImage.setImageResource(R.drawable.whiteclock24);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -365,6 +365,14 @@ public class Routines extends AppCompatActivity {
                             routineGrid.setVisibility(View.GONE);
                         }
                         adapterRoutines.notifyDataSetChanged();
+                        try {
+                            String data = "client@app$action@delroutine$" + current.get("id").toString() + "$";
+                            RequestParameters param = new RequestParameters(data);
+                            new RequestGetOrPost().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, param);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
                     }
                 });
                 Log.d("MSG2", "For: " + head.getText().toString());

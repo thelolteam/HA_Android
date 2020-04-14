@@ -8,9 +8,9 @@
     android:background="@color/background">
 
     <TextView
-        android:id="@+id/noroutinestext"
+        android:id="@+id/noremindertext"
         android:layout_width="match_parent"
-        android:text="No Routines Added"
+        android:text="No Reminder Added"
         android:padding="20dp"
         android:textSize="18dp"
         android:textAlignment="center"
@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:columnCount="1"
-        android:id="@+id/routinegrid"
+        android:id="@+id/remindergrid"
         android:horizontalSpacing="0dp"
         android:verticalSpacing="1dp"
         android:background="@color/F5"
@@ -37,7 +37,7 @@
         android:layout_height="match_parent">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/addRoutine"
+            android:id="@+id/addReminder"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="bottom|right"
